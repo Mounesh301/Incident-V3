@@ -32,8 +32,8 @@ let colorScale;
 const marked = new Marked();
 const filters = {};
 
-// Constants for filters and pre-selected services
-const filterKeys = ["Area", "Shift", "Team", "Service"];
+// Constants for filters and pre-selected services and Regions
+const filterKeys = ["Region", "Shift", "Team", "Service"];
 const preSelectedServices = [
   "CTR",
   "LOGAN",
@@ -47,9 +47,7 @@ const preSelectedServices = [
   "K2",
   "TARDIS",
 ];
-
-const preSelectedAreas = ["Canada", "Ireland", "USA", "UK", "Global", "Singapore", "LATAM"];
-
+const preSelectedRegions = ["Canada", "Ireland", "USA", "UK", "Global", "Singapore", "LATAM"];
 
 // Function to read and parse CSV files
 async function readCSV(file) {
@@ -60,7 +58,9 @@ async function readCSV(file) {
 
     // Split 'Incident Data' into separate fields if it exists
     if (row["Incident Data"]) {
-      const [Incident, DescriptionCleaned, ImpactCleaned, ResolutionDetails] = row["Incident Data"].split("|");
+      const [Incident, DescriptionCleaned, ImpactCleaned, ResolutionDetails] = row[
+        "Incident Data"
+      ].split("|");
       Object.assign(row, { Incident, DescriptionCleaned, ImpactCleaned, ResolutionDetails });
     }
 
@@ -103,8 +103,8 @@ function initializeFilters() {
       selected:
         key === "Service"
           ? preSelectedServices.includes(v)
-          : key === "Area"
-          ? preSelectedAreas.includes(v)
+          : key === "Region"
+          ? preSelectedRegions.includes(v)
           : key === "Team"
           ? false
           : true,
@@ -140,7 +140,7 @@ function drawFilters() {
             </div>
             <div class="dropdown-item">
               <input type="checkbox" class="select-all" id="all-${key}" ${
-        key !== "Service" && key !== "Team" && key !== "Area" ? "checked" : ""
+        key !== "Service" && key !== "Team" && key !== "Region" ? "checked" : ""
       }>
               <label for="all-${key}" class="flex-grow-1">Select All</label>
             </div>
@@ -182,7 +182,7 @@ function renderFilterOptions(key) {
   const options = filters[key];
 
   // Sort options: selected at the top, then unselected
-  options.sort((a, b) => (b.selected - a.selected) || (a.index - b.index));
+  options.sort((a, b) => b.selected - a.selected || a.index - b.index);
 
   // Generate HTML for each option
   const optionsHTML = options
@@ -330,7 +330,7 @@ function drawSankey() {
   const graph = sankey($sankey, {
     data: incidents,
     labelWidth: 100,
-    categories: ["Shift", "Area", "Team", "Service"],
+    categories: ["Shift", "Region", "Team", "Service"],
     size: (d) => d.Count,
     text: (d) => (d.key.length * 9 < d.width ? d.key : null),
     d3,
@@ -440,6 +440,7 @@ function drawNetwork() {
   graph.nodes
     .attr("fill", (d) => colorScale(d.Hours))
     .attr("stroke", "white")
+    .attr("stroke-width", 1)     
     .attr("r", (d) => rScale(d.Count))
     .attr("data-bs-toggle", "tooltip")
     .attr("title", (d) => `${d.value}: ${num2(d.Hours)} hours, ${num0(d.Count)} incidents`);
@@ -482,7 +483,7 @@ async function summarize() {
     // Calculate statistics
     const shiftStats = computeStats(serviceIncidents, "Shift");
     const timeOfDayStats = computeStats(serviceIncidents, "Time of Day");
-    const areaStats = computeStats(serviceIncidents, "Area");
+    const RegionStats = computeStats(serviceIncidents, "Region");
     const teamStats = computeStats(serviceIncidents, "Team");
 
     // Aggregate frequent issues
@@ -496,7 +497,7 @@ async function summarize() {
       .slice(0, 5)
       .map(([description, count]) => ({ Description: description, Count: count }));
 
-    // Identify related services
+    // Identify related services from network data
     const relatedServices = data.relations
       .filter((rel) => rel.Source === service || rel.Target === service)
       .map((rel) => (rel.Source === service ? rel.Target : rel.Source));
@@ -504,7 +505,7 @@ async function summarize() {
     serviceData[service] = {
       shiftStats,
       timeOfDayStats,
-      areaStats,
+      RegionStats,
       teamStats,
       descriptionStats,
       relatedServices,
@@ -514,33 +515,41 @@ async function summarize() {
   // Compute overall statistics
   const overallServiceStats = computeStats(incidents, "Service");
   const overallTeamStats = computeStats(incidents, "Team");
-  const overallAreaStats = computeStats(incidents, "Area");
+  const overallRegionStats = computeStats(incidents, "Region");
   const overallShiftStats = computeStats(incidents, "Shift");
+
+  // Include Network Data in the Message
+  const networkSummary = prepareNetworkSummary(selectedServices);
 
   // Define the system message for the AI assistant
   const system = `As an expert analyst in financial application's incident management, provide a structured and concise summary for the selected services, focusing on:
 
 1. **Overall Summary:**
-   - Identify overall problematic services, along with teams, areas, and shifts (only top 2 or 3).
-   - Highlight services, teams, areas, and shifts which are significantly beyond the threshold duration (only top 2 or 3).
+   - Identify overall problematic services, along with teams, Regions, and shifts (only top 2 or 3).
+   - Highlight services, teams, Regions, and shifts which are significantly beyond the threshold duration (only top 2 or 3).
 
 2. **Analysis:**
-   - Narrate a story flow linking services, teams, areas, and shifts in 4 key points under the subheading 'Analysis'.
+   - Narrate a story flow linking services, teams, Regions, and shifts in 4 key points under the subheading 'Analysis'.
 
 3. **Recommendations:**
    - Highlight connections with other services that might have impacted the problematic services.
    - Provide specific recommendations based on the current data provided.
+
+Include both incident data and network data in your analysis.
 
 Present the information concisely using bullet points under each section. Ensure that the summary is directly based on the data provided and is actionable.`;
 
   // Prepare the message with aggregated data
   let message = `Selected Services:\n${selectedServices.join(", ")}\n\nOverall Summary:\n`;
 
-  // Append top problematic services, teams, areas, and shifts
+  // Append top problematic services, teams, Regions, and shifts
   message += formatTopStats("Problematic services", overallServiceStats, "Service");
   message += formatTopStats("Problematic teams", overallTeamStats, "Team");
-  message += formatTopStats("Problematic areas", overallAreaStats, "Area");
+  message += formatTopStats("Problematic Regions", overallRegionStats, "Region");
   message += formatTopStats("Problematic shifts", overallShiftStats, "Shift");
+
+  // Append network data summary
+  message += `\nNetwork Data Summary:\n${networkSummary}\n`;
 
   // Append per-service summaries
   for (const service of selectedServices) {
@@ -586,6 +595,83 @@ Present the information concisely using bullet points under each section. Ensure
     console.error("Error in summarize function:", error);
     $summary.innerHTML = `<div class="alert alert-danger" role="alert">
       An error occurred while generating the summary: ${error.message}
+    </div>`;
+  }
+}
+
+// Function to answer user's question based on the data
+async function answerQuestion() {
+  const userQuestion = $userQuestion.value.trim();
+  if (!userQuestion) {
+    $summary.innerHTML = `<div class="alert alert-warning" role="alert">
+      Please enter a question to ask.
+    </div>`;
+    return;
+  }
+
+  const incidents = filteredIncidents();
+
+  // Define the system message for the AI assistant
+  const system = `As an expert analyst in financial application's incident management,
+answer the user's question based on the data provided.
+Provide examples from both the incident data and network data to support your answer.
+Present the information concisely and ensure that the answer is directly based on the data provided and is actionable.`;
+
+  // Prepare the message with user's question and data summary
+  let message = `User Question:\n${userQuestion}\n\nData Summary:\n`;
+
+  // Include overall statistics
+  const overallStats = computeStats(incidents, "Service");
+  overallStats.forEach((stat) => {
+    message += `- Service ${stat.Service}: ${stat.Count} incidents, Avg Duration: ${num2(
+      stat.AvgHours
+    )} hours\n`;
+  });
+
+  // Include network data summary
+  const selectedServices = filters["Service"]
+    .filter((opt) => opt.selected)
+    .map((opt) => opt.value);
+
+  const networkSummary = prepareNetworkSummary(selectedServices);
+
+  message += `\nNetwork Data Summary:\n${networkSummary}\n`;
+
+  // Display a loading spinner
+  $summary.innerHTML = `<div class="spinner-border" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>`;
+
+  // Fetch and display the answer from the AI assistant
+  try {
+    let fullContent = "";
+    let lastContent = "";
+    for await (const { content } of asyncLLM(
+      "https://llmfoundry.straive.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          stream: true,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: message },
+          ],
+        }),
+      }
+    )) {
+      if (content && content !== lastContent) {
+        lastContent = content;
+        fullContent = content;
+        $summary.innerHTML = marked.parse(fullContent);
+      }
+    }
+  } catch (error) {
+    console.error("Error in answerQuestion function:", error);
+    $summary.innerHTML = `<div class="alert alert-danger" role="alert">
+      An error occurred while answering the question: ${error.message}
     </div>`;
   }
 }
@@ -657,15 +743,15 @@ function formatServiceStats(data) {
     }
   }
 
-  // Problematic areas
-  const topAreas = data.areaStats.sort((a, b) => b.Count - a.Count).slice(0, 2);
-  if (topAreas.length > 0) {
-    result += `- Problematic areas:\n`;
-    result += topAreas
+  // Problematic Regions
+  const topRegions = data.RegionStats.sort((a, b) => b.Count - a.Count).slice(0, 2);
+  if (topRegions.length > 0) {
+    result += `- Problematic Regions:\n`;
+    result += topRegions
       .map(
-        (area) =>
-          `  ${area.Area}: ${num0(area.Count)} incidents (Avg ${num2(
-            area.AvgHours
+        (Region) =>
+          `  ${Region.Region}: ${num0(Region.Count)} incidents (Avg ${num2(
+            Region.AvgHours
           )} hrs)`
       )
       .join("\n");
@@ -691,9 +777,7 @@ function formatServiceStats(data) {
   if (data.descriptionStats.length > 0) {
     result += `- Frequent issues:\n`;
     result += data.descriptionStats
-      .map(
-        (desc) => `  ${desc.Description}: ${num0(desc.Count)} occurrences`
-      )
+      .map((desc) => `  ${desc.Description}: ${num0(desc.Count)} occurrences`)
       .join("\n");
     result += "\n";
   }
@@ -704,70 +788,35 @@ function formatServiceStats(data) {
   return result;
 }
 
-// Function to answer user's question based on the data
-async function answerQuestion() {
-  const userQuestion = $userQuestion.value.trim();
-  if (!userQuestion) {
-    $summary.innerHTML = `<div class="alert alert-warning" role="alert">
-      Please enter a question to ask.
-    </div>`;
-    return;
-  }
+// Helper function to prepare network data summary
+function prepareNetworkSummary(selectedServices) {
+  // Filter network relations based on selected services
+  const relevantRelations = data.relations.filter(
+    (rel) =>
+      selectedServices.includes(rel.Source) || selectedServices.includes(rel.Target)
+  );
 
-  const incidents = filteredIncidents();
+  // Count the number of connections for each service
+  const connectionCounts = {};
+  relevantRelations.forEach((rel) => {
+    const source = rel.Source;
+    const target = rel.Target;
 
-  // Define the system message for the AI assistant
-  const system = `As an expert analyst in financial application's incident management, 
-answer the user's question based on the data provided. 
-Provide examples from the data to support your answer. 
-Present the information concisely and ensure that the answer is directly based on the data provided and is actionable.`;
+    if (!connectionCounts[source]) connectionCounts[source] = new Set();
+    if (!connectionCounts[target]) connectionCounts[target] = new Set();
 
-  // Prepare the message with user's question and data summary
-  let message = `User Question:\n${userQuestion}\n\nData Summary:\n`;
-
-  // Include overall statistics
-  const overallStats = computeStats(incidents, "Service");
-  overallStats.forEach((stat) => {
-    message += `- Service ${stat.Service}: ${stat.Count} incidents, Avg Duration: ${num2(
-      stat.AvgHours
-    )} hours\n`;
+    connectionCounts[source].add(target);
+    connectionCounts[target].add(source);
   });
 
-  // Display a loading spinner
-  $summary.innerHTML = `<div class="spinner-border" role="status">
-    <span class="visually-hidden">Loading...</span>
-  </div>`;
-
-  // Fetch and display the answer from the AI assistant
-  try {
-    let fullContent = "";
-    let lastContent = "";
-    for await (const { content } of asyncLLM(
-      "https://llmfoundry.straive.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          stream: true,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: message },
-          ],
-        }),
-      }
-    )) {
-      if (content && content !== lastContent) {
-        lastContent = content;
-        fullContent = content;
-        $summary.innerHTML = marked.parse(fullContent);
-      }
-    }
-  } catch (error) {
-    console.error("Error in answerQuestion function:", error);
-    $summary.innerHTML = `<div class="alert alert-danger" role="alert">
-      An error occurred while answering the question: ${error.message}
-    </div>`;
+  // Prepare summary lines
+  let summary = "";
+  for (const service of selectedServices) {
+    const connections = connectionCounts[service]
+      ? Array.from(connectionCounts[service])
+      : [];
+    summary += `- ${service} connections: ${connections.join(", ") || "None"}\n`;
   }
+
+  return summary;
 }
