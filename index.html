@@ -16,18 +16,23 @@
   <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
     <div class="container-fluid">
       <a class="navbar-brand" href=".">Incident Analysis</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <div class="nav-item dropdown ms-auto" role="group" aria-label="Toggle dark mode" title="Toggle Dark Mode">
-          <button class="dark-theme-toggle btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Toggle theme (auto)">
+          <button class="dark-theme-toggle btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown"
+            aria-expanded="false" aria-label="Toggle theme (auto)">
             <i class="bi bi-circle-half"></i> <span class="d-lg-none ms-2">Toggle theme</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button></li>
-            <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button></li>
-            <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button></li>
+            <li><button class="dropdown-item" data-bs-theme-value="light"><i class="me-2 bi bi-sun-fill"></i> Light</button>
+            </li>
+            <li><button class="dropdown-item" data-bs-theme-value="dark"><i class="me-2 bi bi-moon-stars-fill"></i> Dark</button>
+            </li>
+            <li><button class="dropdown-item" data-bs-theme-value="auto"><i class="me-2 bi bi-circle-half"></i> Auto</button>
+            </li>
           </ul>
         </div>
       </div>
@@ -48,7 +53,7 @@
         <div class="col-md mb-3">
           <label for="incidents" class="form-label">Upload <strong>Incidents</strong> .CSV</label>
           <input class="form-control" type="file" id="incidents" name="incidents" accept=".csv" />
-          <p class="form-text"><em>Columns</em>: Service, Shift, Area, Team, Count, Hours</p>
+          <p class="form-text"><em>Columns</em>: Service, Shift, Region, Team, Count, Hours</p>
         </div>
         <div class="col-md mb-3">
           <label for="relations" class="form-label">Upload <strong>Service Impact</strong> .CSV</label>
@@ -64,68 +69,74 @@
 
     <div id="result" class="d-none">
       <div class="container">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <label class="form-check-label text-nowrap" for="show-links">Show links</label>
-            <div class="form-check form-switch mt-0">
+        <div class="flex-row">
+          <div class="toggle-check-box">
+            <label class="form-label" for="show-links">Show links</label>
+            <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" role="switch" id="show-links">
             </div>
           </div>
-          <div class="col">
+
+          <div class="slide-bar">
             <label for="threshold" class="form-label">Filter by incident duration (hours)</label>
-            <div class="d-flex align-items-center">
-              <input type="range" class="form-range" id="threshold" min="0" max="10" step="0.1" value="3" list="tickmarks">
-              <button class="btn btn-outline-secondary ms-3" id="reset-filters" title="Reset Filters">
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-            </div>
-            <datalist id="tickmarks">
-              <option value="0" label="0h"></option>
-              <option value="1" label="1h"></option>
-              <option value="2" label="2h"></option>
-              <option value="3" label="3h"></option>
-              <option value="4" label="4h"></option>
-              <option value="5" label="5h"></option>
-              <option value="6" label="6h"></option>
-              <option value="7" label="7h"></option>
-              <option value="8" label="8h"></option>
-              <option value="9" label="9h"></option>
-              <option value="10" label="10h"></option>
-            </datalist>
+            <input type="range" class="form-range" id="threshold" min="0" max="10" step="0.1" value="3" list="tickmarks">
             <div id="threshold-value">Threshold: <span id="threshold-display">3</span> hours</div>
           </div>
+
+          
+          <div class="reset-filters">
+
+            <button class="btn btn-outline-primary" id="reset-filters" title="Reset Filters">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+
+
+          </div>
         </div>
+        <datalist id="tickmarks">
+          <option value="0" label="0h"></option>
+          <option value="1" label="1h"></option>
+          <option value="2" label="2h"></option>
+          <option value="3" label="3h"></option>
+          <option value="4" label="4h"></option>
+          <option value="5" label="5h"></option>
+          <option value="6" label="6h"></option>
+          <option value="7" label="7h"></option>
+          <option value="8" label="8h"></option>
+          <option value="9" label="9h"></option>
+          <option value="10" label="10h"></option>
+        </datalist>
       </div>
-
-      <svg width="1000" height="400" id="sankey" fill="currentColor" class="d-block mx-auto"></svg>
-
-      <svg width="1000" height="1000" id="network" fill="currentColor" class="d-block mx-auto">
-        <defs>
-          <marker
-            id="triangle"
-            viewBox="0 0 10 10"
-            refX="20"
-            refY="5"
-            markerUnits="strokeWidth"
-            markerWidth="5"
-            markerHeight="5"
-            orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(128,0,0,0.2)" />
-          </marker>
-        </defs>
-      </svg>
-
-      <div class="container mt-5">
-        <div class="mb-3">
-          <label for="user-question" class="form-label">Ask a Question:</label>
-          <textarea class="form-control" id="user-question" rows="3" placeholder="Type your question here..."></textarea>
-        </div>
-        <button class="btn btn-secondary btn-lg d-block mx-auto mb-4" id="ask-question">Ask Question</button>
-      </div>
-
-      <button class="btn btn-primary btn-lg d-block mx-auto" id="summarize">Analyze and Summarize</button>
-      <section id="summary" class="narrative mx-auto mt-5"></section>
     </div>
+
+    <svg width="1000" height="400" id="sankey" fill="currentColor" class="d-block mx-auto"></svg>
+
+    <svg width="1000" height="1000" id="network" fill="currentColor" class="d-block mx-auto">
+      <defs>
+        <marker
+          id="triangle"
+          viewBox="0 0 10 10"
+          refX="20"
+          refY="5"
+          markerUnits="strokeWidth"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(128,0,0,0.2)" />
+        </marker>
+      </defs>
+    </svg>
+
+    <div class="container mt-5">
+      <div class="mb-3">
+        <label for="user-question" class="form-label">Ask a Question:</label>
+        <textArea class="form-control" id="user-question" rows="3" placeholder="Type your question here..."></textArea>
+      </div>
+      <button class="btn btn-secondary btn-lg d-block mx-auto mb-4" id="ask-question">Ask Question</button>
+    </div>
+
+    <button class="btn btn-primary btn-lg d-block mx-auto" id="summarize">Analyze and Summarize</button>
+    <section id="summary" class="narrative mx-auto mt-5"></section>
   </div>
 
   <footer class="my-5 vh-100 d-flex align-items-center justify-content-center">
