@@ -155,7 +155,7 @@
 
 #threshold-value {
   margin-top: 0.5rem; /* Adjusted spacing below the threshold text */
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 /* Adjust slider width to take maximum possible space */
