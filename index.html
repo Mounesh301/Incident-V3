@@ -88,6 +88,12 @@
               <option value="10" label="10h"></option>
             </datalist>
             <div id="threshold-value">Threshold: <span id="threshold-display">3</span> hours</div>
+            <!-- Refresh Button -->
+            <div class="col-auto align-self-start">
+              <button class="btn btn-outline-secondary" id="reset-filters" title="Reset Filters">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -111,13 +117,19 @@
         </defs>
       </svg>
 
-      <div class="mb-3">
-        <label for="user-question" class="form-label">Ask a Question:</label>
-        <textarea class="form-control" id="user-question" rows="3" placeholder="Type your question here..."></textarea>
+      <!-- Moved the question textarea and button into a separate section -->
+      <div class="container mt-5">
+        <div class="mb-3">
+          <label for="user-question" class="form-label">Ask a Question:</label>
+          <textarea class="form-control" id="user-question" rows="3" placeholder="Type your question here..."></textarea>
+        </div>
+        <!-- New Ask Question Button -->
+        <button class="btn btn-secondary btn-lg d-block mx-auto mb-4" id="ask-question">Ask Question</button>
       </div>
 
+      <!-- Summarize Button remains separate -->
       <button class="btn btn-primary btn-lg d-block mx-auto" id="summarize">Analyze and Summarize</button>
-      <section id="summary" class="narrative mx-auto"></section>
+      <section id="summary" class="narrative mx-auto mt-5"></section>
     </div>
 
   </div>
