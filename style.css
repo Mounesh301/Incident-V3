@@ -1,3 +1,10 @@
+/* Add white stroke to nodes */
+.node {
+  stroke: white;
+  stroke-width: 0.5px;
+}
+
+/* Existing styles */
 .narrative {
   max-width: 40rem;
 }
@@ -78,9 +85,9 @@
 /* Stylize the "Ask a Question" text area */
 #user-question {
   border: 2px solid #007bff; /* Blue border */
-  border-radius: 8px;       /* Rounded corners */
-  padding: 10px;            /* Add padding */
-  font-size: 1.1rem;        /* Larger font */
+  border-radius: 8px;        /* Rounded corners */
+  padding: 10px;             /* Add padding */
+  font-size: 1.1rem;         /* Larger font */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
   transition: box-shadow 0.3s, border-color 0.3s; /* Smooth transitions */
 }
@@ -94,11 +101,11 @@
 /* Stylize the "Ask Question" button */
 #ask-question {
   background-color: #007bff; /* Blue background */
-  color: #fff;              /* White text */
-  border: none;             /* Remove border */
-  border-radius: 8px;       /* Rounded corners */
-  padding: 10px 20px;       /* Add padding */
-  font-size: 1.2rem;        /* Larger font */
+  color: #fff;               /* White text */
+  border: none;              /* Remove border */
+  border-radius: 8px;        /* Rounded corners */
+  padding: 10px 20px;        /* Add padding */
+  font-size: 1.2rem;         /* Larger font */
   transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
 }
 
@@ -109,19 +116,31 @@
 
 #ask-question:active {
   background-color: #003d80; /* Even darker blue when clicked */
-  transform: translateY(0);  /* Reset lift */
+  transform: translateY(0);   /* Reset lift */
 }
 
-.row.align-items-center {
+/* Flex container for filters */
+.flex-row {
   display: flex;
-  align-items: center;
-  gap: 10px; /* Optional: adds spacing between slider and button */
+  flex-direction: row;
+  gap: 10px;
+ /* Align items to the top */
 }
 
-#threshold {
-  width: 100%; /* Ensures the slider spans its column */
+/* Container for the "Show links" toggle */
+.toggle-check-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  min-width: 15px; /* Ensures labels align properly */
 }
 
+/* Container for the slider */
+.slide-bar {
+  flex-grow: 1; /* Allows the slider to take up remaining space */
+}
+
+/* Reset button styling */
 #reset-filters {
   display: inline-flex;
   align-items: center;
@@ -129,32 +148,45 @@
   padding: 6px;
   background-color: #007bff;
   color: #fff;
+  border: none;
+  border-radius: 4px;
+  align-self: center; /* Vertically centers the button within the flex-row */
 }
 
 #threshold-value {
-  margin-bottom: 1.5rem; /* Add spacing below the threshold text */
+  margin-top: 0.5rem; /* Adjusted spacing below the threshold text */
+  margin-bottom: 0.5rem;
 }
 
-.shift-visual {
-  margin-top: 1rem; /* Add spacing above the yellow bar (if applicable class) */
+/* Adjust slider width to take maximum possible space */
+#threshold {
+  width: 100%; /* Ensures the slider spans its container */
 }
 
-.row.align-items-center {
+/* Form switch customizations */
+.form-check .form-check-input {
+  float: left;
+  margin-left: -1.5em;
+}
+
+.form-switch .form-check-input {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%280, 0, 0, 0.25%29'/%3e%3c/svg%3e");
+  width: 2em;
+  margin-left: -2.5em;
+  background-image: var(--bs-form-switch-bg);
+  background-position: left center;
+  border-radius: 2em;
+  transition: background-position .15s ease-in-out;
+}
+
+/* Ensure labels are aligned horizontally */
+.toggle-check-box label,
+
+.slide-bar label {
+  font-weight: 500;
+}
+
+.reset-filters{
   display: flex;
-  align-items: center; /* Align items vertically */
-}
-
-#show-links {
-  margin-top: 0; /* Remove extra margin */
-}
-
-label[for="show-links"] {
-  display: inline-block;
-  margin-right: 0.5rem; /* Add spacing between label and toggle */
-}
-
-.form-check {
-  display: flex;
-  align-items: center;
 }
 
