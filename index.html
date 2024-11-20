@@ -64,16 +64,21 @@
 
     <div id="result" class="d-none">
       <div class="container">
-        <div class="row g-2">
-          <div class="col-md flex-grow-0">
+        <div class="row align-items-center">
+          <div class="col-auto">
             <label class="form-check-label text-nowrap" for="show-links">Show links</label>
-            <div class="form-check form-switch mt-2">
+            <div class="form-check form-switch mt-0">
               <input class="form-check-input" type="checkbox" role="switch" id="show-links">
             </div>
           </div>
-          <div class="col-md">
+          <div class="col">
             <label for="threshold" class="form-label">Filter by incident duration (hours)</label>
-            <input type="range" class="form-range" id="threshold" min="0" max="10" step="0.1" value="3" list="tickmarks">
+            <div class="d-flex align-items-center">
+              <input type="range" class="form-range" id="threshold" min="0" max="10" step="0.1" value="3" list="tickmarks">
+              <button class="btn btn-outline-secondary ms-3" id="reset-filters" title="Reset Filters">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
             <datalist id="tickmarks">
               <option value="0" label="0h"></option>
               <option value="1" label="1h"></option>
@@ -88,16 +93,9 @@
               <option value="10" label="10h"></option>
             </datalist>
             <div id="threshold-value">Threshold: <span id="threshold-display">3</span> hours</div>
-            <!-- Refresh Button -->
-            <div class="col-auto align-self-start">
-              <button class="btn btn-outline-secondary" id="reset-filters" title="Reset Filters">
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-            </div>
           </div>
         </div>
       </div>
-
 
       <svg width="1000" height="400" id="sankey" fill="currentColor" class="d-block mx-auto"></svg>
 
@@ -117,38 +115,22 @@
         </defs>
       </svg>
 
-      <!-- Moved the question textarea and button into a separate section -->
       <div class="container mt-5">
         <div class="mb-3">
           <label for="user-question" class="form-label">Ask a Question:</label>
           <textarea class="form-control" id="user-question" rows="3" placeholder="Type your question here..."></textarea>
         </div>
-        <!-- New Ask Question Button -->
         <button class="btn btn-secondary btn-lg d-block mx-auto mb-4" id="ask-question">Ask Question</button>
       </div>
 
-      <!-- Summarize Button remains separate -->
       <button class="btn btn-primary btn-lg d-block mx-auto" id="summarize">Analyze and Summarize</button>
       <section id="summary" class="narrative mx-auto mt-5"></section>
     </div>
-
   </div>
 
   <footer class="my-5 vh-100 d-flex align-items-center justify-content-center">
     <h1 class="display-4">Designed by <a href="https://gramener.com/" class="text-reset link-offset-3 link-underline link-underline-opacity-25">Gramener</a></h1>
   </footer>
-
-  <div class="modal" tabindex="-1" id="snippet-modal">
-    <div class="modal-dialog">
-      <div class="modal-content" id="snippet-modal">
-        <div class="modal-header">
-          <h5 class="modal-title" id="snippet-modal-title"></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" id="snippet-modal-body"></div>
-      </div>
-    </div>
-  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" type="module"></script>
   <script src="https://cdn.jsdelivr.net/npm/@gramex/ui@0.3/dist/dark-theme.js" type="module"></script>
