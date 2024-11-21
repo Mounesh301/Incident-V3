@@ -547,13 +547,15 @@ async function summarize() {
   const overallTeamStats = computeStats(incidents, "Team");
   const overallRegionStats = computeStats(incidents, "Region");
   const overallShiftStats = computeStats(incidents, "Shift");
+  const overallTimeOfDayStats = computeStats(incidents, "Time of Day"); // --- Addition 4: Include Time of Day Stats ---
 
   // --- Addition 4: Check for non-zero counts before proceeding ---
   if (
     overallServiceStats.length === 0 &&
     overallTeamStats.length === 0 &&
     overallRegionStats.length === 0 &&
-    overallShiftStats.length === 0
+    overallShiftStats.length === 0 &&
+    overallTimeOfDayStats.length === 0 // Include Time of Day
   ) {
     $summary.innerHTML = `<div class="alert alert-warning" role="alert">
       No incidents to summarize based on the current filters.
@@ -565,15 +567,15 @@ async function summarize() {
   // Compute network data summary
   const networkSummary = prepareNetworkSummary(selectedServices);
 
-  // --- Addition 5: Update system message with instructions ---
+  // --- Addition 5: Update system message with instructions to highlight Time of Day ---
   const system = `As an expert analyst in financial application's incident management, provide a structured and concise summary for the selected services, focusing on:
-
+  
 1. **Overall Summary:**
-   - Identify overall problematic services, along with teams, Regions, and shifts (only top 2 or 3).
-   - Highlight services, teams, Regions, and shifts which are significantly beyond the threshold duration (only top 2 or 3).
+   - Identify overall problematic services, along with teams, Regions, shifts, and times of day (only top 2 or 3 in each category).
+   - Highlight services, teams, Regions, shifts, and times of day which are significantly beyond the threshold duration (only top 2 or 3 in each category).
 
 2. **Analysis:**
-   - Narrate a story flow linking services, teams, Regions, and shifts in 4 key points under the subheading 'Analysis'.
+   - Narrate a story flow linking services, teams, Regions, shifts, and times of day in 4 key points under the subheading 'Analysis'.
 
 3. **Recommendations:**
    - Highlight connections with other services that might have impacted the problematic services.
@@ -582,7 +584,7 @@ async function summarize() {
 **Important Instructions:**
 - **Whole Numbers:** All incident counts should be presented as whole numbers (integers).
 - **Rounding Up:** If any incident counts are fractional, they should be rounded up to the nearest whole number.
-- **No Zero Incidents:** Do not mention or include any groups (services, teams, Regions, shifts) that have zero incidents.
+- **No Zero Incidents:** Do not mention or include any groups (services, teams, Regions, shifts, times of day) that have zero incidents.
 
 Include both incident data and network data in your analysis.
 
@@ -592,11 +594,12 @@ Present the information concisely using bullet points under each section. Ensure
   // Prepare the message with aggregated data
   let message = `Selected Services:\n${selectedServices.join(", ")}\n\nOverall Summary:\n`;
 
-  // --- Addition 6: Ensure only non-zero stats are included ---
+  // --- Addition 6: Include Time of Day in Top Stats ---
   message += formatTopStats("Problematic services", overallServiceStats, "Service");
   message += formatTopStats("Problematic teams", overallTeamStats, "Team");
   message += formatTopStats("Problematic Regions", overallRegionStats, "Region");
   message += formatTopStats("Problematic shifts", overallShiftStats, "Shift");
+  message += formatTopStats("Problematic times of day", overallTimeOfDayStats, "TimeOfDay"); // --- Addition 6 ---
   // --- End Addition 6 ---
 
   // Append network data summary
@@ -664,9 +667,10 @@ async function answerQuestion() {
 
   // Compute overall statistics with rounded counts and no zeros
   const overallStats = computeStats(incidents, "Service");
+  const overallTimeOfDayStats = computeStats(incidents, "Time of Day"); // --- Addition 7: Include Time of Day Stats ---
 
   // --- Addition 7: Check for non-zero counts before proceeding ---
-  if (overallStats.length === 0) {
+  if (overallStats.length === 0 && overallTimeOfDayStats.length === 0) {
     $summary.innerHTML = `<div class="alert alert-warning" role="alert">
       No incidents available to answer the question based on the current filters.
     </div>`;
@@ -681,24 +685,31 @@ async function answerQuestion() {
 
   const networkSummary = prepareNetworkSummary(selectedServices);
 
-  // --- Addition 8: Update system message with instructions ---
+  // --- Addition 8: Update system message with instructions to highlight Time of Day ---
   const system = `As an expert analyst in financial application's incident management, answer the user's question based on the data provided.
 
 **Important Instructions:**
 - **Whole Numbers:** All incident counts should be presented as whole numbers (integers).
 - **Rounding Up:** If any incident counts are fractional, they should be rounded up to the nearest whole number.
-- **No Zero Incidents:** Do not mention or include any groups (services, teams, Regions, shifts) that have zero incidents.
+- **No Zero Incidents:** Do not mention or include any groups (services, teams, Regions, shifts, times of day) that have zero incidents.
 
-Provide examples from both the incident data and network data to support your answer. Present the information concisely and ensure that the answer is directly based on the data provided and is actionable.`;
+Provide examples from both the incident data and network data to support your answer. Ensure that you highlight which time of day has experienced a higher number of incidents. Present the information concisely and ensure that the answer is directly based on the data provided and is actionable.`;
   // --- End Addition 8 ---
 
   // Prepare the message with user's question and data summary
   let message = `User Question:\n${userQuestion}\n\nData Summary:\n`;
 
-  // --- Addition 9: Ensure only non-zero stats are included ---
+  // --- Addition 9: Include Time of Day in Overall Statistics ---
   message += `Overall Service Statistics:\n`;
   overallStats.forEach((stat) => {
     message += `- Service ${stat.Service}: ${num0(stat.Count)} incidents, Avg Duration: ${num2(
+      stat.AvgHours
+    )} hours\n`;
+  });
+
+  message += `\nOverall Time of Day Statistics:\n`;
+  overallTimeOfDayStats.forEach((stat) => {
+    message += `- ${stat.TimeOfDay}: ${num0(stat.Count)} incidents, Avg Duration: ${num2(
       stat.AvgHours
     )} hours\n`;
   });
@@ -746,7 +757,7 @@ Provide examples from both the incident data and network data to support your an
   }
 }
 
-// --- Addition 10: Update formatServiceStats to ensure no zero counts ---
+// --- Addition 10: Update formatServiceStats to ensure inclusion of Time of Day ---
 function formatServiceStats(data) {
   let result = "";
 
