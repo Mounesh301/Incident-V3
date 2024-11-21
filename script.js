@@ -49,13 +49,10 @@ const preSelectedServices = [
 ];
 const preSelectedRegions = ["Canada", "Ireland", "USA", "UK", "Global", "Singapore", "LATAM"];
 
-// --- Addition 1: Update num0 to round up before formatting ---
+// --- Addition 1: Create a separate function for rounded counts ---
 function num0Rounded(value) {
   return Math.ceil(value).toLocaleString(); // Round up and format with commas
 }
-// Override the existing num0 function with the rounded version
-const originalNum0 = num0;
-num0 = num0Rounded;
 // --- End Addition 1 ---
 
 // Function to read and parse CSV files
@@ -599,7 +596,7 @@ Present the information concisely using bullet points under each section. Ensure
   message += formatTopStats("Problematic teams", overallTeamStats, "Team");
   message += formatTopStats("Problematic Regions", overallRegionStats, "Region");
   message += formatTopStats("Problematic shifts", overallShiftStats, "Shift");
-  message += formatTopStats("Problematic times of day", overallTimeOfDayStats, "TimeOfDay"); // --- Addition 6 ---
+  message += formatTopStats("Problematic times of day", overallTimeOfDayStats, "Time of Day"); // --- Addition 6 ---
   // --- End Addition 6 ---
 
   // Append network data summary
@@ -709,7 +706,7 @@ Provide examples from both the incident data and network data to support your an
 
   message += `\nOverall Time of Day Statistics:\n`;
   overallTimeOfDayStats.forEach((stat) => {
-    message += `- ${stat.TimeOfDay}: ${num0(stat.Count)} incidents, Avg Duration: ${num2(
+    message += `- ${stat["Time of Day"]}: ${num0(stat.Count)} incidents, Avg Duration: ${num2(
       stat.AvgHours
     )} hours\n`;
   });
@@ -783,7 +780,7 @@ function formatServiceStats(data) {
       result += topTimesOfDay
         .map(
           (time) =>
-            `    ${time.TimeOfDay}: ${num0(time.Count)} incidents (Avg ${num2(
+            `    ${time["Time of Day"]}: ${num0(time.Count)} incidents (Avg ${num2(
               time.AvgHours
             )} hrs)`
         )
@@ -888,4 +885,3 @@ function prepareNetworkSummary(selectedServices) {
 // Initialize tooltips for visualizations
 new bootstrap.Tooltip($sankey, { selector: "[data-bs-toggle='tooltip']" });
 new bootstrap.Tooltip($network, { selector: "[data-bs-toggle='tooltip']" });
-
