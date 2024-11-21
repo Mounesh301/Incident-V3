@@ -290,8 +290,8 @@ function selectTopTeams() {
   const incidentsByTeamService = d3.rollups(
     data.incidents,
     (v) => d3.sum(v, (d) => d.Count),
-    (d) => d.Service,
-    (d) => d.Team
+    (d) => d["Service"], // Ensure correct property name
+    (d) => d["Team"] // Ensure correct property name
   );
 
   const topTeams = new Set();
@@ -430,7 +430,7 @@ function drawNetwork() {
       TotalHours: d3.sum(v, (d) => d.Hours * d.Count),
       Count: d3.sum(v, (d) => d.Count),
     }),
-    (d) => d.Service
+    (d) => d["Service"]
   );
 
   const { nodes, links } = kpartite(
@@ -469,7 +469,7 @@ function drawNetwork() {
     .attr("stroke-width", 1)
     .attr("r", (d) => rScale(d.Count))
     .attr("data-bs-toggle", "tooltip")
-    .attr("title", (d) => `${d.value}: ${num2(d.Hours)} hours, ${num0(d.Count)} incidents`);
+    .attr("title", (d) => `${d.value}: ${num2(d.Hours)} hours, ${num0Rounded(d.Count)} incidents`); // Use num0Rounded
 
   // Style links
   graph.links
@@ -699,14 +699,14 @@ Provide examples from both the incident data and network data to support your an
   // --- Addition 9: Include Time of Day in Overall Statistics ---
   message += `Overall Service Statistics:\n`;
   overallStats.forEach((stat) => {
-    message += `- Service ${stat.Service}: ${num0(stat.Count)} incidents, Avg Duration: ${num2(
+    message += `- Service ${stat.Service}: ${num0Rounded(stat.Count)} incidents, Avg Duration: ${num2(
       stat.AvgHours
     )} hours\n`;
   });
 
   message += `\nOverall Time of Day Statistics:\n`;
   overallTimeOfDayStats.forEach((stat) => {
-    message += `- ${stat["Time of Day"]}: ${num0(stat.Count)} incidents, Avg Duration: ${num2(
+    message += `- ${stat["Time of Day"]}: ${num0Rounded(stat.Count)} incidents, Avg Duration: ${num2(
       stat.AvgHours
     )} hours\n`;
   });
@@ -768,7 +768,7 @@ function formatServiceStats(data) {
       result += topShifts
         .map(
           (shift) =>
-            `    ${shift.Shift}: ${num0(shift.Count)} incidents (Avg ${num2(
+            `    ${shift.Shift}: ${num0Rounded(shift.Count)} incidents (Avg ${num2(
               shift.AvgHours
             )} hrs)`
         )
@@ -780,7 +780,7 @@ function formatServiceStats(data) {
       result += topTimesOfDay
         .map(
           (time) =>
-            `    ${time["Time of Day"]}: ${num0(time.Count)} incidents (Avg ${num2(
+            `    ${time["Time of Day"]}: ${num0Rounded(time.Count)} incidents (Avg ${num2(
               time.AvgHours
             )} hrs)`
         )
@@ -796,7 +796,7 @@ function formatServiceStats(data) {
     result += topRegions
       .map(
         (Region) =>
-          `  ${Region.Region}: ${num0(Region.Count)} incidents (Avg ${num2(
+          `  ${Region.Region}: ${num0Rounded(Region.Count)} incidents (Avg ${num2(
             Region.AvgHours
           )} hrs)`
       )
@@ -811,7 +811,7 @@ function formatServiceStats(data) {
     result += topTeams
       .map(
         (team) =>
-          `  ${team.Team}: ${num0(team.Count)} incidents (Avg ${num2(
+          `  ${team.Team}: ${num0Rounded(team.Count)} incidents (Avg ${num2(
             team.AvgHours
           )} hrs)`
       )
@@ -823,7 +823,7 @@ function formatServiceStats(data) {
   if (data.descriptionStats.length > 0) {
     result += `- Frequent issues:\n`;
     result += data.descriptionStats
-      .map((desc) => `  ${desc.Description}: ${num0(desc.Count)} occurrences`)
+      .map((desc) => `  ${desc.Description}: ${num0Rounded(desc.Count)} occurrences`)
       .join("\n");
     result += "\n";
   }
@@ -843,7 +843,7 @@ function formatTopStats(title, statsArray, keyName) {
   result += topStats
     .map(
       (item) =>
-        `  ${item[keyName]}: ${num0(item.Count)} incidents (Avg ${num2(item.AvgHours)} hrs)`
+        `  ${item[keyName]}: ${num0Rounded(item.Count)} incidents (Avg ${num2(item.AvgHours)} hrs)`
     )
     .join("\n");
   return result + "\n\n";
@@ -882,6 +882,4 @@ function prepareNetworkSummary(selectedServices) {
   return summary;
 }
 
-// Initialize tooltips for visualizations
-new bootstrap.Tooltip($sankey, { selector: "[data-bs-toggle='tooltip']" });
-new bootstrap.Tooltip($network, { selector: "[data-bs-toggle='tooltip']" });
+
