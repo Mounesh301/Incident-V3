@@ -888,3 +888,4 @@ function prepareNetworkSummary(selectedServices) {
 // Initialize tooltips for visualizations
 new bootstrap.Tooltip($sankey, { selector: "[data-bs-toggle='tooltip']" });
 new bootstrap.Tooltip($network, { selector: "[data-bs-toggle='tooltip']" });
+
