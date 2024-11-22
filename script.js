@@ -49,12 +49,6 @@ const preSelectedServices = [
 ];
 const preSelectedRegions = ["Canada", "Ireland", "USA", "UK", "Global", "Singapore", "LATAM"];
 
-// --- Addition 1: Create a separate function for rounded counts ---
-function num0Rounded(value) {
-  return Math.ceil(value).toLocaleString(); // Round up and format with commas
-}
-// --- End Addition 1 ---
-
 // Function to read and parse CSV files
 async function readCSV(file) {
   const text = await file.text();
@@ -290,8 +284,8 @@ function selectTopTeams() {
   const incidentsByTeamService = d3.rollups(
     data.incidents,
     (v) => d3.sum(v, (d) => d.Count),
-    (d) => d["Service"], // Ensure correct property name
-    (d) => d["Team"] // Ensure correct property name
+    (d) => d.Service,
+    (d) => d.Team
   );
 
   const topTeams = new Set();
@@ -330,25 +324,6 @@ function filteredIncidents() {
   );
 }
 
-// --- Addition 2: Update computeStats to round up and exclude zero counts ---
-function computeStats(dataArray, groupByKey) {
-  return d3
-    .rollups(
-      dataArray,
-      (v) => ({
-        Count: Math.ceil(d3.sum(v, (d) => d.Count)), // Round up the count
-        Hours: d3.sum(v, (d) => d.Hours * d.Count),
-      }),
-      (d) => d[groupByKey]
-    )
-    .map(([key, stats]) => ({
-      [groupByKey]: key,
-      Count: stats.Count,
-      AvgHours: stats.Count > 0 ? stats.Hours / stats.Count : 0, // Prevent division by zero
-    }))
-    .filter((stat) => stat.Count > 0); // Exclude groups with zero incidents
-}
-// --- End Addition 2 ---
 
 // Function to draw the Sankey diagram
 function drawSankey() {
@@ -356,9 +331,9 @@ function drawSankey() {
   const graph = sankey($sankey, {
     data: incidents,
     labelWidth: 100,
-    categories: ["Shift", "Region", "Team", "Service"],
+    categories: ["Shift", "Region", "Team Acro", "Service"],
     size: (d) => d.Count,
-    text: (d) => (d.key.length * 9 < d.width ? d.key : null),
+    text: (d) => (d.key.length * 6 < d.width ? d.key : null),
     d3,
   });
   graphs.sankey = graph;
@@ -371,6 +346,7 @@ function drawSankey() {
   graph.nodes
     .attr("data-bs-toggle", "tooltip")
     .attr("title", (d) => `${d.key}: ${num2(d.Hours)} hours`);
+
   graph.links
     .attr("data-bs-toggle", "tooltip")
     .attr("title", (d) => `${d.source.key} - ${d.target.key}: ${num2(d.Hours)} hours`);
@@ -385,7 +361,7 @@ function adjustHoursAndSize(items) {
   items.forEach((d) => {
     const totalAdjustedHours = d3.sum(d.group, (d) => d.Hours * d.Count);
     const totalCount = d3.sum(d.group, (d) => d.Count);
-    d.Hours = totalCount > 0 ? totalAdjustedHours / totalCount : 0;
+    d.Hours = totalAdjustedHours / totalCount;
     d.size = totalCount;
   });
 }
@@ -421,7 +397,7 @@ $threshold.addEventListener("input", () => {
 
 // Function to draw the network graph
 function drawNetwork() {
-  const incidents = filteredIncidents();
+  const incidents = data.incidents;
 
   // Calculate service statistics
   const serviceStats = d3.rollup(
@@ -430,7 +406,7 @@ function drawNetwork() {
       TotalHours: d3.sum(v, (d) => d.Hours * d.Count),
       Count: d3.sum(v, (d) => d.Count),
     }),
-    (d) => d["Service"]
+    (d) => d.Service
   );
 
   const { nodes, links } = kpartite(
@@ -445,7 +421,7 @@ function drawNetwork() {
   // Assign statistics to nodes
   for (const node of nodes) {
     Object.assign(node, serviceStats.get(node.value) || { TotalHours: 0, Count: 0 });
-    node.Hours = node.Count > 0 ? node.TotalHours / node.Count : 0;
+    node.Hours = node.TotalHours / node.Count || 0;
   }
 
   // Define forces for the network layout
@@ -466,10 +442,10 @@ function drawNetwork() {
   graph.nodes
     .attr("fill", (d) => colorScale(d.Hours))
     .attr("stroke", "white")
-    .attr("stroke-width", 1)
+    .attr("stroke-width", 1)     
     .attr("r", (d) => rScale(d.Count))
     .attr("data-bs-toggle", "tooltip")
-    .attr("title", (d) => `${d.value}: ${num2(d.Hours)} hours, ${num0Rounded(d.Count)} incidents`); // Use num0Rounded
+    .attr("title", (d) => `${d.value}: ${num2(d.Hours)} hours, ${num0(d.Count)} incidents`);
 
   // Style links
   graph.links
@@ -481,10 +457,9 @@ function drawNetwork() {
 new bootstrap.Tooltip($sankey, { selector: "[data-bs-toggle='tooltip']" });
 new bootstrap.Tooltip($network, { selector: "[data-bs-toggle='tooltip']" });
 
-// --- Addition 3: Update event listeners for buttons ---
+// Event listeners for buttons
 $summarize.addEventListener("click", summarize);
 $askQuestion.addEventListener("click", answerQuestion);
-// --- End Addition 3 ---
 
 // Function to summarize data and display analysis
 async function summarize() {
@@ -544,60 +519,36 @@ async function summarize() {
   const overallTeamStats = computeStats(incidents, "Team");
   const overallRegionStats = computeStats(incidents, "Region");
   const overallShiftStats = computeStats(incidents, "Shift");
-  const overallTimeOfDayStats = computeStats(incidents, "Time of Day"); // --- Addition 4: Include Time of Day Stats ---
 
-  // --- Addition 4: Check for non-zero counts before proceeding ---
-  if (
-    overallServiceStats.length === 0 &&
-    overallTeamStats.length === 0 &&
-    overallRegionStats.length === 0 &&
-    overallShiftStats.length === 0 &&
-    overallTimeOfDayStats.length === 0 // Include Time of Day
-  ) {
-    $summary.innerHTML = `<div class="alert alert-warning" role="alert">
-      No incidents to summarize based on the current filters.
-    </div>`;
-    return;
-  }
-  // --- End Addition 4 ---
-
-  // Compute network data summary
+  // Include Network Data in the Message
   const networkSummary = prepareNetworkSummary(selectedServices);
 
-  // --- Addition 5: Update system message with instructions to highlight Time of Day ---
+  // Define the system message for the AI assistant
   const system = `As an expert analyst in financial application's incident management, provide a structured and concise summary for the selected services, focusing on:
-  
+
 1. **Overall Summary:**
-   - Identify overall problematic services, along with teams, Regions, shifts, and times of day (only top 2 or 3 in each category).
-   - Highlight services, teams, Regions, shifts, and times of day which are significantly beyond the threshold duration (only top 2 or 3 in each category).
+   - Identify overall problematic services, along with teams, Regions, times of day and shifts (only top 2 or 3).
+   - Highlight services, teams, Regions, times of day and shifts which are significantly beyond the threshold duration (only top 2 or 3).
 
 2. **Analysis:**
-   - Narrate a story flow linking services, teams, Regions, shifts, and times of day in 4 key points under the subheading 'Analysis'.
+   - Narrate a story flow linking services, teams, Regions, and shifts in 4 key points under the subheading 'Analysis'.
 
 3. **Recommendations:**
    - Highlight connections with other services that might have impacted the problematic services.
    - Provide specific recommendations based on the current data provided.
 
-**Important Instructions:**
-- **Whole Numbers:** All incident counts should be presented as whole numbers (integers).
-- **Rounding Up:** If any incident counts are fractional, they should be rounded up to the nearest whole number.
-- **No Zero Incidents:** Do not mention or include any groups (services, teams, Regions, shifts, times of day) that have zero incidents.
-
 Include both incident data and network data in your analysis.
 
 Present the information concisely using bullet points under each section. Ensure that the summary is directly based on the data provided and is actionable.`;
-  // --- End Addition 5 ---
 
   // Prepare the message with aggregated data
   let message = `Selected Services:\n${selectedServices.join(", ")}\n\nOverall Summary:\n`;
 
-  // --- Addition 6: Include Time of Day in Top Stats ---
+  // Append top problematic services, teams, Regions, and shifts
   message += formatTopStats("Problematic services", overallServiceStats, "Service");
   message += formatTopStats("Problematic teams", overallTeamStats, "Team");
   message += formatTopStats("Problematic Regions", overallRegionStats, "Region");
   message += formatTopStats("Problematic shifts", overallShiftStats, "Shift");
-  message += formatTopStats("Problematic times of day", overallTimeOfDayStats, "Time of Day"); // --- Addition 6 ---
-  // --- End Addition 6 ---
 
   // Append network data summary
   message += `\nNetwork Data Summary:\n${networkSummary}\n`;
@@ -662,57 +613,30 @@ async function answerQuestion() {
 
   const incidents = filteredIncidents();
 
-  // Compute overall statistics with rounded counts and no zeros
+  // Define the system message for the AI assistant
+  const system = `As an expert analyst in financial application's incident management,
+answer the user's question based on the data provided.
+Provide examples from both the incident data and network data to support your answer.
+Present the information concisely and ensure that the answer is directly based on the data provided and is actionable.`;
+
+  // Prepare the message with user's question and data summary
+  let message = `User Question:\n${userQuestion}\n\nData Summary:\n`;
+
+  // Include overall statistics
   const overallStats = computeStats(incidents, "Service");
-  const overallTimeOfDayStats = computeStats(incidents, "Time of Day"); // --- Addition 7: Include Time of Day Stats ---
+  overallStats.forEach((stat) => {
+    message += `- Service ${stat.Service}: ${stat.Count} incidents, Avg Duration: ${num2(
+      stat.AvgHours
+    )} hours\n`;
+  });
 
-  // --- Addition 7: Check for non-zero counts before proceeding ---
-  if (overallStats.length === 0 && overallTimeOfDayStats.length === 0) {
-    $summary.innerHTML = `<div class="alert alert-warning" role="alert">
-      No incidents available to answer the question based on the current filters.
-    </div>`;
-    return;
-  }
-  // --- End Addition 7 ---
-
-  // Compute network data summary
+  // Include network data summary
   const selectedServices = filters["Service"]
     .filter((opt) => opt.selected)
     .map((opt) => opt.value);
 
   const networkSummary = prepareNetworkSummary(selectedServices);
 
-  // --- Addition 8: Update system message with instructions to highlight Time of Day ---
-  const system = `As an expert analyst in financial application's incident management, answer the user's question based on the data provided.
-
-**Important Instructions:**
-- **Whole Numbers:** All incident counts should be presented as whole numbers (integers).
-- **Rounding Up:** If any incident counts are fractional, they should be rounded up to the nearest whole number.
-- **No Zero Incidents:** Do not mention or include any groups (services, teams, Regions, shifts, times of day) that have zero incidents.
-
-Provide examples from both the incident data and network data to support your answer. Ensure that you highlight which time of day has experienced a higher number of incidents. Present the information concisely and ensure that the answer is directly based on the data provided and is actionable.`;
-  // --- End Addition 8 ---
-
-  // Prepare the message with user's question and data summary
-  let message = `User Question:\n${userQuestion}\n\nData Summary:\n`;
-
-  // --- Addition 9: Include Time of Day in Overall Statistics ---
-  message += `Overall Service Statistics:\n`;
-  overallStats.forEach((stat) => {
-    message += `- Service ${stat.Service}: ${num0Rounded(stat.Count)} incidents, Avg Duration: ${num2(
-      stat.AvgHours
-    )} hours\n`;
-  });
-
-  message += `\nOverall Time of Day Statistics:\n`;
-  overallTimeOfDayStats.forEach((stat) => {
-    message += `- ${stat["Time of Day"]}: ${num0Rounded(stat.Count)} incidents, Avg Duration: ${num2(
-      stat.AvgHours
-    )} hours\n`;
-  });
-  // --- End Addition 9 ---
-
-  // Include network data summary
   message += `\nNetwork Data Summary:\n${networkSummary}\n`;
 
   // Display a loading spinner
@@ -754,7 +678,39 @@ Provide examples from both the incident data and network data to support your an
   }
 }
 
-// --- Addition 10: Update formatServiceStats to ensure inclusion of Time of Day ---
+// Helper function to compute statistics
+function computeStats(dataArray, groupByKey) {
+  return d3
+    .rollups(
+      dataArray,
+      (v) => ({
+        Count: d3.sum(v, (d) => d.Count),
+        Hours: d3.sum(v, (d) => d.Hours * d.Count),
+      }),
+      (d) => d[groupByKey]
+    )
+    .map(([key, stats]) => ({
+      [groupByKey]: key,
+      Count: stats.Count,
+      AvgHours: stats.Hours / stats.Count,
+    }));
+}
+
+// Helper function to format top statistics for the message
+function formatTopStats(title, statsArray, keyName) {
+  const topStats = statsArray.sort((a, b) => b.Count - a.Count).slice(0, 5);
+  if (topStats.length === 0) return "";
+  let result = `- ${title}:\n`;
+  result += topStats
+    .map(
+      (item) =>
+        `  ${item[keyName]}: ${num0(item.Count)} incidents (Avg ${num2(item.AvgHours)} hrs)`
+    )
+    .join("\n");
+  return result + "\n\n";
+}
+
+// Helper function to format per-service statistics
 function formatServiceStats(data) {
   let result = "";
 
@@ -768,7 +724,7 @@ function formatServiceStats(data) {
       result += topShifts
         .map(
           (shift) =>
-            `    ${shift.Shift}: ${num0Rounded(shift.Count)} incidents (Avg ${num2(
+            `    ${shift.Shift}: ${num0(shift.Count)} incidents (Avg ${num2(
               shift.AvgHours
             )} hrs)`
         )
@@ -780,7 +736,7 @@ function formatServiceStats(data) {
       result += topTimesOfDay
         .map(
           (time) =>
-            `    ${time["Time of Day"]}: ${num0Rounded(time.Count)} incidents (Avg ${num2(
+            `    ${time.TimeOfDay}: ${num0(time.Count)} incidents (Avg ${num2(
               time.AvgHours
             )} hrs)`
         )
@@ -796,7 +752,7 @@ function formatServiceStats(data) {
     result += topRegions
       .map(
         (Region) =>
-          `  ${Region.Region}: ${num0Rounded(Region.Count)} incidents (Avg ${num2(
+          `  ${Region.Region}: ${num0(Region.Count)} incidents (Avg ${num2(
             Region.AvgHours
           )} hrs)`
       )
@@ -811,7 +767,7 @@ function formatServiceStats(data) {
     result += topTeams
       .map(
         (team) =>
-          `  ${team.Team}: ${num0Rounded(team.Count)} incidents (Avg ${num2(
+          `  ${team.Team}: ${num0(team.Count)} incidents (Avg ${num2(
             team.AvgHours
           )} hrs)`
       )
@@ -823,7 +779,7 @@ function formatServiceStats(data) {
   if (data.descriptionStats.length > 0) {
     result += `- Frequent issues:\n`;
     result += data.descriptionStats
-      .map((desc) => `  ${desc.Description}: ${num0Rounded(desc.Count)} occurrences`)
+      .map((desc) => `  ${desc.Description}: ${num0(desc.Count)} occurrences`)
       .join("\n");
     result += "\n";
   }
@@ -832,21 +788,6 @@ function formatServiceStats(data) {
   result += `- Impacting connections:\n  ${data.relatedServices.join(", ") || "None"}\n`;
 
   return result;
-}
-// --- End Addition 10 ---
-
-// Helper function to format top statistics for the message
-function formatTopStats(title, statsArray, keyName) {
-  const topStats = statsArray.sort((a, b) => b.Count - a.Count).slice(0, 5);
-  if (topStats.length === 0) return "";
-  let result = `- ${title}:\n`;
-  result += topStats
-    .map(
-      (item) =>
-        `  ${item[keyName]}: ${num0Rounded(item.Count)} incidents (Avg ${num2(item.AvgHours)} hrs)`
-    )
-    .join("\n");
-  return result + "\n\n";
 }
 
 // Helper function to prepare network data summary
@@ -881,7 +822,3 @@ function prepareNetworkSummary(selectedServices) {
 
   return summary;
 }
-
-// Initialize tooltips for visualizations
-new bootstrap.Tooltip($sankey, { selector: "[data-bs-toggle='tooltip']" });
-new bootstrap.Tooltip($network, { selector: "[data-bs-toggle='tooltip']" });
